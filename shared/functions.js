@@ -1,11 +1,46 @@
-const { execSync } = require('child_process');
+const { fork } = require('child_process');
 
 const sleep = (seconds) => new Promise((resolve => setTimeout(() => resolve(), seconds * 1000)))
 const random = (min,max) => { return Math.floor((Math.random())*(max-min+1))+min; }
 
-function executeAction(actionName, actionData, actor, contract) {
-	console.log(`executing ${contract}:${actionName} for ${actor}`);
+function cli(options){
+  // console.log("cli params", options)
+  let command = '/opt/homebrew/lib/node_modules/@titandeveos/uxwallet-cli/bin/run';
 
+  return new Promise((resolve, reject) =>{
+    let forked = fork( command, options || [], { stdio:"pipe" } );
+    let stdOutArr = []
+
+    forked.stdout.on("data", data => {
+      try{
+        let output = JSON.parse(data);
+        resolve(output);
+      }catch(ex){
+        // build stdout array that will be returned on process exit
+        let formatted = data.toString().split(/[\r\n|\n|\r]/).filter(String);
+        stdOutArr.push(...formatted)
+      }
+    });
+    forked.on("exit", code => {
+      if(stdOutArr.length) {
+        try {
+          // attempt to parse chunked JSON sent above
+          resolve(JSON.parse(stdOutArr.join('')))
+        } catch(ex) {
+          resolve(stdOutArr)
+        }
+      }
+    });
+    forked.stderr.on("data", error => {
+    	// console.log(error.toString())
+    	if(error.toString().includes("FetchError") || error.toString().includes("store not open")) {
+    		reject(error.toString());
+    	}
+    });
+  });
+}
+
+function executeAction(actionName, actionData, actor, contract) {
 	var transaction = {
 		actions: [{
 			account: contract,
@@ -19,36 +54,24 @@ function executeAction(actionName, actionData, actor, contract) {
 	}
 
 	let commandArray = [
-		'uxcli',
 		'eosio:sign',
-		'--chainid "8fc6dce7942189f842170de953932b1f66693ad3788f766e777b6f9d22335c02"',
-		'--key "EOS8NxVcvaYA5YkYDSwizUK6MRWQWViiUWXhutDYGCbwa21fHdDog"',
-		`--tx '${JSON.stringify(transaction)}'`,
-		`--permission "${actor}@active"`,
+		'--chainid', "8fc6dce7942189f842170de953932b1f66693ad3788f766e777b6f9d22335c02",
+		'--key', "EOS8NxVcvaYA5YkYDSwizUK6MRWQWViiUWXhutDYGCbwa21fHdDog",
+		'--tx', JSON.stringify(transaction),
+		'--permission', `${actor}@active`,
 		'--broadcast'
 	]
-	try {
-		let result = execSync(commandArray.join(' '), {stdio: ['inherit']}) || Buffer.from('{"data":""}');
-		return JSON.parse(result.toString()).data;
-	} catch(e) {
-		return {"error": e.toString()};
-	}
+	return cli(commandArray);
 }
 
 const getAccount = (username) => {
 	let commandArray = [
-		"uxcli",
 		"eosio:fetch",
-		"--server https://explorer.uxnetwork.io",
-		"--endpoint '/v1/chain/get_account'",
-		`--data '{"account_name":"${username}"}'`
+		"--server", "https://explorer.uxnetwork.io",
+		"--endpoint", "/v1/chain/get_account",
+		"--data", JSON.stringify({account_name: username})
 	]
-	try {
-		let result = execSync(commandArray.join(' '), {stdio: ['inherit']}) || Buffer.from('{"data":""}');
-		return JSON.parse(result.toString()).data;
-	} catch(e) {
-		return {"error": e.toString()};
-	}
+	return cli(commandArray);
 }
 
 const getTableRows = (contract, table, scope) => {
@@ -67,32 +90,22 @@ const getTableRows = (contract, table, scope) => {
 	}
 
 	let commandArray = [
-		"uxcli",
 		"eosio:fetch",
-		"--server https://explorer.uxnetwork.io",
-		"--endpoint '/v1/chain/get_table_rows'",
-		`--data '${JSON.stringify(payload)}'`
+		"--server", "https://explorer.uxnetwork.io",
+		"--endpoint", '/v1/chain/get_table_rows',
+		"--data", JSON.stringify(payload)
 	]
-	try {
-		return JSON.parse(execSync(commandArray.join(' '), {stdio: ['inherit']}).toString()).data;
-	} catch(e) {
-		return {"error": e.toString()};
-	}
+	return cli(commandArray);
 }
 
-const getCurrencyBalance = (code, account, symbol) => {
+const getCurrencyBalance = (account, code, symbol) => {
 	let commandArray = [
-		"uxcli",
 		"eosio:fetch",
-		"--server https://explorer.uxnetwork.io",
-		"--endpoint '/v1/chain/get_currency_balance'",
-		`--data '${JSON.stringify({code, account, symbol})}'`
+		"--server", "https://explorer.uxnetwork.io",
+		"--endpoint", '/v1/chain/get_currency_balance',
+		"--data", JSON.stringify({code, account, symbol})
 	]
-	try {
-		return parseFloat(JSON.parse(execSync(commandArray.join(' '), {stdio: ['inherit']}).toString()).data[0]);
-	} catch(e) {
-		return {"error": e.toString()};
-	}
+	return cli(commandArray);
 }
 
-module.exports = { execSync, sleep, random, getAccount, getTableRows, getCurrencyBalance, executeAction };
+module.exports = { cli, sleep, random, getAccount, getTableRows, getCurrencyBalance, executeAction };
