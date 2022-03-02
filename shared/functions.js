@@ -40,6 +40,15 @@ function cli(options){
   });
 }
 
+function unlock(password) {
+	let commandArray = [
+		'db:unlock',
+		'-p',
+		password
+	]
+	return cli(commandArray);
+}
+
 function executeAction(actionName, actionData, actor, contract) {
 	var transaction = {
 		actions: [{
@@ -108,4 +117,4 @@ const getCurrencyBalance = (account, code, symbol) => {
 	return cli(commandArray);
 }
 
-module.exports = { cli, sleep, random, getAccount, getTableRows, getCurrencyBalance, executeAction };
+module.exports = { sleep, unlock, getAccount, getTableRows, getCurrencyBalance, executeAction };

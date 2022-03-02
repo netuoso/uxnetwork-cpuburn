@@ -1,6 +1,6 @@
 import {
-	cli,
 	sleep,
+	unlock,
 	getTableRows,
 	executeAction,
 	getCurrencyBalance,
@@ -28,19 +28,18 @@ async function run(username) {
 
 		res = await executeAction("zx", {}, username, "genesis111hf");
 		if(res.error && res.error.includes("deadline exceeded")) {
-			console.log('deadline exceeded');
+			console.log('deadline exceeded: ', timestamp);
 			run(username);
 		} else if(res.error && res.error.includes("billed CPU time")) {
-			console.log('not enough CPU')
+			console.log('not enough CPU:    ', timestamp)
 			await sleep(120); run(username);
 		} else {
-			console.log(`executed - (${Date.now()})`)
+			console.log('executed:          ', timestamp)
 			run(username);
 		}
-		// await sleep(1); run(username);
 	} catch(e) {
 		console.log(e);
-		if(e.toString().includes("store not open")) process.exit();
+		if(e.toString().includes("store not open")) await unlock('password');
 		await sleep(1); run(username);
 	}
 }
