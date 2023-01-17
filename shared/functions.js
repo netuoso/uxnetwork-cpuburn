@@ -5,7 +5,7 @@ const random = (min,max) => { return Math.floor((Math.random())*(max-min+1))+min
 
 function cli(options){
   // console.log("cli params", options)
-  let command = '/opt/homebrew/lib/node_modules/@titandeveos/uxwallet-cli/bin/run';
+  let command = require('path').resolve(__dirname, '..', 'node_modules', '@trunx-io', 'cli', 'bin', 'run');
 
   return new Promise((resolve, reject) =>{
     let forked = fork( command, options || [], { stdio:"pipe" } );
@@ -49,7 +49,7 @@ function unlock(password) {
 	return cli(commandArray);
 }
 
-function executeAction(actionName, actionData, actor, contract) {
+function executeAction(actionName, actionData, actor, contract, pubkey) {
 	var transaction = {
 		actions: [{
 			account: contract,
@@ -65,7 +65,7 @@ function executeAction(actionName, actionData, actor, contract) {
 	let commandArray = [
 		'eosio:sign',
 		'--chainid', "8fc6dce7942189f842170de953932b1f66693ad3788f766e777b6f9d22335c02",
-		'--key', "EOS8NxVcvaYA5YkYDSwizUK6MRWQWViiUWXhutDYGCbwa21fHdDog",
+		'--key', pubkey,
 		'--tx', JSON.stringify(transaction),
 		'--permission', `${actor}@active`,
 		'--broadcast'

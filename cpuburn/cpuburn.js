@@ -14,7 +14,7 @@ async function run(username) {
 			let resaccpayQuery = await getTableRows("eosio", "resaccpay", "eosio");
 			let foundBalance = resaccpayQuery.data.rows.find((x) => x.account === username);
 			if ( foundBalance ) {
-				await executeAction("claimdistrib", {"account": username}, username, "eosio");
+				await executeAction("claimdistrib", {"account": username}, username, "eosio", process.argv[3]);
 				let pendingBalance = await getCurrencyBalance(username, "eosio.token", "UTX");
 				await executeAction("delegatebw", {
 			        "from": username,
@@ -22,11 +22,11 @@ async function run(username) {
 			        "stake_net_quantity": "0.0000 UTX",
 			        "stake_cpu_quantity": pendingBalance.data[0],
 			        "transfer": 0
-				}, username, "eosio");
+				}, username, "eosio", process.argv[3]);
 			}
 		}
 
-		res = await executeAction("zx", {}, username, "genesis111hf");
+		res = await executeAction("zx", {}, username, "genesis111hf", process.argv[3]);
 		if(res.error && res.error.includes("deadline exceeded")) {
 			console.log('deadline exceeded: ', timestamp);
 			run(username);
